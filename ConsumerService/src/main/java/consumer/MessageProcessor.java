@@ -1,12 +1,9 @@
 package consumer;
 
 import org.json.JSONObject;
-/**
- * MessageProcessor: Parses JSON messages and stores skier lift ride data in SkierDataStore.
- */
+import redis.clients.jedis.Jedis;
+
 public class MessageProcessor {
-  // Processes a JSON message and stores it in the skier data store.
-  // message: JSON message containing skier lift ride data
   public static void processMessage(String message) {
     try {
       JSONObject json = new JSONObject(message);
@@ -17,10 +14,20 @@ public class MessageProcessor {
       int seasonID = json.getInt("seasonID");
       int time = json.getInt("time");
 
-      LiftRide liftRide = new LiftRide(liftID, time, resortID, dayID, seasonID);
-      SkierDataStore.addLiftRide(skierID, liftRide);
+      try (Jedis jedis = new Jedis("localhost", 6379)) {
+        String redisKey = "skier:" + skierID + ":day:" + dayID + ":time:" + time;
 
-      System.out.println("Processed & stored lift ride for skierID: " + skierID);
+        JSONObject rideJson = new JSONObject();
+        rideJson.put("resortID", resortID);
+        rideJson.put("seasonID", seasonID);
+        rideJson.put("dayID", dayID);
+        rideJson.put("liftID", liftID);
+        rideJson.put("time", time);
+
+        jedis.set(redisKey, rideJson.toString());
+        System.out.println("✔ Stored in Redis → " + redisKey);
+      }
+
     } catch (Exception e) {
       System.err.println("Error processing message: " + e.getMessage());
     }
