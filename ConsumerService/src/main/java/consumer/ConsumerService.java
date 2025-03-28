@@ -40,6 +40,7 @@ public class ConsumerService {
                 channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
               } catch (Exception e) {
                 e.printStackTrace();
+                channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true); // added basicNack handling when exception is caught
               }
             };
 
